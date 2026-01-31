@@ -18,6 +18,8 @@ migrate_working_dir/
 *.iws
 .idea/
 
+.prettierrc
+
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
 # is commented out by default.
@@ -43,3 +45,17 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+/windows/
+
+# Custom Sensitive Data
+.env
+android/key.properties
+ios/Runner/GoogleService-Info.plist
+android/app/google-services.json
+
+# Linux traces
+.fuse_hidden*
+
+# Specific tool folders
+.fvm/
