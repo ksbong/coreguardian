@@ -13,103 +13,122 @@ class Reactor3DView extends StatefulWidget {
 class _Reactor3DViewState extends State<Reactor3DView> {
   final Flutter3DController _controller = Flutter3DController();
 
-  // 🎛️ 카메라 설정값
-  double _radius = 50.0; // 줌 거리
-  double _theta = 30.0; // 가로 회전
-  double _phi = 60.0; // 세로 각도
+  // ====================================================
+  // 📐 [카메라 설정] 여기가 핵심!
+  // 모델에 따라 이 숫자들을 조금씩 조절해서 최적의 뷰를 찾으세요.
+  // ====================================================
+  final double _initialRadius = 25.0; // 줌 (거리)
+  final double _initialTheta = 45.0; // 가로 회전 (45도 대각선)
+  final double _initialPhi = 55.0; // 세로 각도 (내려다보기)
+  // ⭐ 모델이 너무 밑에 있으면 이 값을 키우세요 (예: 1.0 -> 2.0)
+  final double _targetY = 2.0; // 카메라 시선 높이 보정
 
-  // ⭐ 추가된 설정: 카메라 시선 높이 (모델 위치 보정용)
-  // 이 값이 커질수록 모델이 화면 아래로 내려가고, 작아지면(마이너스) 위로 올라옴
-  double _targetY = 0.0;
+  // 🎯 [히트박스 설정] 중앙 인터랙션 영역 크기
+  final double _hitBoxWidth = 400.0;
+  final double _hitBoxHeight = 350.0;
 
-  final bool _showDebugControls = true;
+  bool _isHovering = false;
+  Offset _mousePos = Offset.zero;
+  Offset? _pointerDownPosition;
 
   @override
   void initState() {
     super.initState();
+    // 모델 로딩이 끝나면 설정한 카메라 각도로 즉시 이동
     _controller.onModelLoaded.addListener(() {
       if (_controller.onModelLoaded.value) {
-        _updateCamera();
+        // 1. 시선 높이 조절 (모델 끌어올리기)
+        _controller.setCameraTarget(0, _targetY, 0);
+        // 2. 얼짱 각도로 세팅
+        _controller.setCameraOrbit(_initialTheta, _initialPhi, _initialRadius);
       }
     });
   }
 
-  void _updateCamera() {
-    // 1. 먼저 카메라가 쳐다볼 높이(Target)를 설정 (X, Y, Z)
-    _controller.setCameraTarget(0, _targetY, 0);
-    // 2. 그 다음 카메라 위치(Orbit)를 설정
-    _controller.setCameraOrbit(_theta, _phi, _radius);
-  }
-
   @override
   Widget build(BuildContext context) {
-    // Blender로 텍스처 포함해서 다시 저장한 파일 경로를 쓰세요.
-    const String modelPath = 'assets/models/nuclear_city.glb';
+    const String modelPath = 'assets/models/nuclear.glb';
 
     return Stack(
       children: [
-        Container(
-          color: const Color(0xFF14181F),
+        // 1. 제스처 감지기 (Translucent로 통과시킴)
+        Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerHover: (event) {
+            _checkHover(event.localPosition);
+            setState(() => _mousePos = event.localPosition);
+          },
+          onPointerDown: (event) => _pointerDownPosition = event.localPosition,
+          onPointerUp: (event) {
+            if (_pointerDownPosition != null) {
+              final distance =
+                  (event.localPosition - _pointerDownPosition!).distance;
+              if (distance < 10) {
+                // 드래그가 아닌 클릭일 때만
+                _handleClick();
+              }
+            }
+          },
           child: Flutter3DViewer(
             controller: _controller,
             src: modelPath,
             progressBarColor: Colors.cyanAccent,
-            enableTouch: false,
+            enableTouch: true, // 회전 허용
           ),
         ),
 
-        if (_showDebugControls)
+        // 2. 호버링 라벨
+        if (_isHovering && widget.isInteractive)
           Positioned(
-            top: 50,
-            right: 20,
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              width: 220, // 폭을 조금 늘림
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.8),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.cyanAccent),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "🔧 CAMERA DEBUG",
-                    style: GoogleFonts.oswald(color: Colors.cyanAccent),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // 새로 추가된 슬라이더
-                  _buildSlider(
-                    "↕️ 시선 높이 (위/아래)",
-                    _targetY,
-                    -50,
-                    50,
-                    (v) => _targetY = v,
-                  ),
-                  const Divider(color: Colors.white24),
-                  _buildSlider(
-                    "🔍 Zoom (거리)",
-                    _radius,
-                    2,
-                    500,
-                    (v) => _radius = v,
-                  ),
-                  _buildSlider(
-                    "🔄 Rotate (회전)",
-                    _theta,
-                    -180,
-                    180,
-                    (v) => _theta = v,
-                  ),
-                  _buildSlider("📐 Height (각도)", _phi, 0, 90, (v) => _phi = v),
-
-                  const Divider(color: Colors.white24),
-                  Text(
-                    "Target Y: ${_targetY.toStringAsFixed(1)}\nOrbit($_theta, $_phi, $_radius)",
-                    style: const TextStyle(color: Colors.white, fontSize: 10),
-                  ),
-                ],
+            top: _mousePos.dy - 50,
+            left: _mousePos.dx + 15,
+            child: IgnorePointer(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.cyanAccent),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.cyanAccent.withOpacity(0.4),
+                      blurRadius: 10,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.settings_suggest,
+                          color: Colors.cyanAccent,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Core Guardian System",
+                          style: GoogleFonts.oswald(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      "클릭하여 상태 점검",
+                      style: GoogleFonts.shareTechMono(
+                        color: Colors.white70,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -117,38 +136,89 @@ class _Reactor3DViewState extends State<Reactor3DView> {
     );
   }
 
-  Widget _buildSlider(
-    String label,
-    double val,
-    double min,
-    double max,
-    Function(double) onChanged,
-  ) {
-    // (이전과 동일한 코드)
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "$label: ${val.toStringAsFixed(1)}",
-          style: const TextStyle(color: Colors.white70, fontSize: 10),
-        ),
-        SizedBox(
-          height: 30,
-          child: Slider(
-            value: val,
-            min: min,
-            max: max,
-            activeColor: Colors.cyanAccent,
-            inactiveColor: Colors.grey,
-            onChanged: (v) {
-              setState(() {
-                onChanged(v);
-              });
-              _updateCamera();
-            },
+  void _checkHover(Offset localPos) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final centerX = screenWidth / 2;
+    final centerY = screenHeight / 2;
+    final left = centerX - (_hitBoxWidth / 2);
+    final right = centerX + (_hitBoxWidth / 2);
+    final top = centerY - (_hitBoxHeight / 2);
+    final bottom = centerY + (_hitBoxHeight / 2);
+
+    bool inside =
+        (localPos.dx >= left &&
+        localPos.dx <= right &&
+        localPos.dy >= top &&
+        localPos.dy <= bottom);
+
+    if (_isHovering != inside) {
+      setState(() => _isHovering = inside);
+    }
+  }
+
+  void _handleClick() {
+    if (_isHovering && widget.isInteractive) {
+      // 🚀 탱탱볼 애니메이션 팝업 호출
+      _showBouncingPopup(
+        context,
+        "원자로 통합 제어실",
+        "시스템 상태: 정상 가동 중\n현재 출력: 98%\n노심 온도: 315°C\n\n[안전 수칙 준수 요망]",
+      );
+    }
+  }
+
+  // 🎉 [NEW] 튕겨 나오는 애니메이션 팝업 함수
+  void _showBouncingPopup(BuildContext context, String title, String content) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true, // 바깥 클릭 시 닫힘
+      barrierLabel: "Close",
+      barrierColor: Colors.black54, // 배경 어둡게
+      transitionDuration: const Duration(milliseconds: 400), // 애니메이션 속도 (0.4초)
+      pageBuilder: (ctx, anim1, anim2) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1E2228),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+            side: const BorderSide(color: Colors.cyanAccent, width: 2),
           ),
-        ),
-      ],
+          title: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.cyanAccent),
+              const SizedBox(width: 10),
+              Text(title, style: GoogleFonts.oswald(color: Colors.white)),
+            ],
+          ),
+          content: Text(
+            content,
+            style: GoogleFonts.shareTechMono(
+              color: Colors.white70,
+              fontSize: 16,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                "확인",
+                style: TextStyle(
+                  color: Colors.cyanAccent,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        // 📈 elasticOut 곡선을 사용해서 띠용~ 하는 효과 주기
+        final curvedValue = Curves.elasticOut.transform(anim1.value);
+        return Transform.scale(
+          scale: curvedValue, // 0배에서 1배로 커지면서 튕김
+          child: child,
+        );
+      },
     );
   }
 }
