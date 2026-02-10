@@ -1,130 +1,153 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../logic/reactor_provider.dart';
 
-class DashboardWidget extends StatelessWidget {
-  final double temperature;
-  final double pressure;
-  final double output;
-
-  const DashboardWidget({
-    super.key,
-    required this.temperature,
-    required this.pressure,
-    required this.output,
-  });
+class DashboardScreen extends StatelessWidget {
+  const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // ⚡ ReactorProvider의 상태만 구독 (UI 갱신 최적화)
+    final reactor = context.watch<ReactorProvider>();
+    final state = reactor.state;
+
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF222222), // 짙은 회색 패널
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[800]!, width: 2),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black54,
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.all(20),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "REACTOR STATUS MONITOR",
-            style: TextStyle(
-              color: Colors.white54,
-              letterSpacing: 1.5,
-              fontSize: 10,
-            ),
+          Text(
+            "MAIN CONTROL ROOM",
+            style: GoogleFonts.oswald(color: Colors.cyanAccent, fontSize: 24),
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 20),
+
+          // 1. 핵심 계기판 (온도, 압력 등)
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              // 온도 게이지
-              _buildDigitalGauge(
+              _buildGauge(
                 "CORE TEMP",
-                temperature,
-                "°C",
-                290,
-                330,
-                1200,
+                "${state.temperature.toStringAsFixed(1)} °C",
+                state.temperature > 800 ? Colors.red : Colors.green,
               ),
-              // 압력 게이지
-              _buildDigitalGauge("PRESSURE", pressure, "MPa", 14.0, 16.0, 20.0),
-              // 발전량 게이지
-              _buildDigitalGauge("OUTPUT", output, "MWe", 800, 1000, 1200),
+              const SizedBox(width: 15),
+              _buildGauge(
+                "PRESSURE",
+                "${state.pressure.toStringAsFixed(1)} MPa",
+                state.pressure > 16 ? Colors.orange : Colors.blue,
+              ),
             ],
+          ),
+          const SizedBox(height: 30),
+
+          // 2. 조작 패널 (슬라이더)
+          Text(
+            "SYSTEM CONTROLS",
+            style: GoogleFonts.oswald(color: Colors.white70, fontSize: 18),
+          ),
+          const SizedBox(height: 10),
+
+          _buildControlSlider(
+            "CONTROL ROD (제어봉)",
+            state.controlRodLevel,
+            (val) => reactor.setControlRod(val),
+            Colors.orangeAccent,
+          ),
+
+          _buildControlSlider(
+            "COOLANT PUMP (냉각 펌프)",
+            state.pumpSpeed,
+            (val) => reactor.setPumpSpeed(val),
+            Colors.blueAccent,
+          ),
+
+          const Spacer(),
+
+          // 3. SCRAM 버튼 (긴급 정지)
+          SizedBox(
+            width: double.infinity,
+            height: 60,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.withValues(alpha: .8),
+              ),
+              icon: const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.white,
+              ),
+              label: const Text(
+                "MANUAL SCRAM (긴급 정지)",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              onPressed: () => reactor.scram(),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDigitalGauge(
+  Widget _buildGauge(String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: Colors.black45,
+          border: Border.all(color: color.withValues(alpha: .5)),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          children: [
+            Text(
+              label,
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              value,
+              style: GoogleFonts.shareTechMono(
+                color: color,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildControlSlider(
     String label,
     double value,
-    String unit,
-    double minSafe,
-    double maxSafe,
-    double danger,
+    Function(double) onChanged,
+    Color color,
   ) {
-    // 상태에 따른 색상 결정 (안전: 초록, 주의: 주황, 위험: 빨강)
-    Color statusColor = Colors.greenAccent;
-    if (value > maxSafe || value < minSafe) statusColor = Colors.orangeAccent;
-    if (value > danger) statusColor = Colors.redAccent;
-
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: const TextStyle(color: Colors.white70)),
+            Text(
+              "${(value * 100).toInt()}%",
+              style: TextStyle(color: color, fontWeight: FontWeight.bold),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: statusColor, width: 3),
-            color: Colors.black,
-          ),
-          alignment: Alignment.center,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                value.toStringAsFixed(1),
-                style: TextStyle(
-                  color: statusColor,
-                  fontSize: 18,
-                  fontFamily: 'monospace',
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                unit,
-                style: const TextStyle(color: Colors.grey, fontSize: 10),
-              ),
-            ],
-          ),
+        Slider(
+          value: value,
+          onChanged: onChanged,
+          activeColor: color,
+          inactiveColor: Colors.white10,
         ),
-        const SizedBox(height: 5),
-        // 상태 표시 LED
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: statusColor,
-            shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: statusColor, blurRadius: 5)],
-          ),
-        ),
+        const SizedBox(height: 10),
       ],
     );
   }

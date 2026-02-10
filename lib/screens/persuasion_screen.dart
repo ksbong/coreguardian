@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// 경로 주의 (상대 경로 사용)
+import 'package:google_fonts/google_fonts.dart';
 import '../features/simulation/logic/game_manager.dart';
 import '../features/persuasion/ui/dialogue_view.dart';
 
@@ -9,38 +9,63 @@ class PersuasionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 임시 데이터 (나중에 logic 폴더로 분리 가능)
+    // 💡 임시 시나리오 데이터 (나중에 DB나 JSON으로 분리 추천)
     final data = {
-      "npc": "환경 운동가",
-      "text": "원자력 발전소는 너무 위험하지 않나요?",
-      "choices": ["안전 설비가 있습니다.", "위험하죠.", "저도 몰라요."],
+      "npc": "지역 주민 대표",
+      "text": "최근 지진 소식에 불안해서 잠을 못 자겠소! 원전이 안전하다는 증거가 있소?",
+      "choices": [
+        "내진 설계 기준인 0.3g(규모 7.0)를 견딥니다.", // 정답 (전문적 수치 제시)
+        "걱정 마세요, 절대 안 무너집니다.", // 애매한 답변
+        "사고 나면 대피하시면 됩니다." // 최악의 답변
+      ],
       "correct": 0,
     };
 
     return Scaffold(
-      appBar: AppBar(title: const Text("주민 설득 (3시간 소요)")),
+      backgroundColor: const Color(0xFF0F1115),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF181B21),
+        title: Text("주민 설득", style: GoogleFonts.oswald(color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       body: Center(
         child: DialogueView(
           npcName: data['npc'] as String,
           content: data['text'] as String,
           choices: data['choices'] as List<String>,
           onChoice: (index) {
-            // ⚡ 핵심: 매니저를 통해 행동 수행
+            // ⚡ 3시간을 소모하며 설득 시도
             context.read<GameManager>().performAction("주민 설득", 3, () {
-              // 원자로가 안 터졌을 때만 실행되는 로직
+              // 3시간 동안 원자로가 안 터졌다면 이 콜백 실행
               if (index == data['correct']) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text("설득 성공!")));
-                Navigator.pop(context); // 성공 시 복귀
+                _showResult(context, "설득 성공", "주민들이 안심하고 돌아갔습니다.", Colors.green);
               } else {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text("설득 실패...")));
+                _showResult(context, "설득 실패", "주민들의 불안감이 증폭되었습니다...", Colors.red);
               }
             });
           },
         ),
+      ),
+    );
+  }
+
+  void _showResult(BuildContext context, String title, String msg, Color color) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E2228),
+        title: Text(title, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+        content: Text(msg, style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx); // 팝업 닫기
+              Navigator.pop(context); // 화면 닫기
+            },
+            child: const Text("복귀", style: TextStyle(color: Colors.cyanAccent)),
+          )
+        ],
       ),
     );
   }

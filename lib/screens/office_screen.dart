@@ -1,87 +1,112 @@
 import 'package:flutter/material.dart';
-import 'persuasion_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../features/simulation/logic/game_manager.dart';
+import 'persuasion_screen.dart'; // 설득 화면으로 이동
 
 class OfficeScreen extends StatelessWidget {
   const OfficeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        const Text(
-          "EXTERNAL AFFAIRS",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            letterSpacing: 2,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const Divider(color: Colors.white24),
-        const SizedBox(height: 20),
+    final log = context.select((GameManager gm) => gm.lastLog);
 
-        _buildNpcCard(
-          context,
-          "환경 운동가",
-          "assets/npc_eco.png",
-          "원전 반대 시위 중...",
-          Colors.red,
-        ),
-        _buildNpcCard(
-          context,
-          "지역 상인회장",
-          "assets/npc_merchant.png",
-          "경제적 효과에 관심",
-          Colors.orange,
-        ),
-        _buildNpcCard(
-          context,
-          "시청 공무원",
-          "assets/npc_gov.png",
-          "안전 보고서 요청",
-          Colors.blue,
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "ADMINISTRATION OFFICE",
+            style: GoogleFonts.oswald(color: Colors.cyanAccent, fontSize: 24),
+          ),
+          const SizedBox(height: 10),
+
+          // 최근 로그 표시창
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              "📝 LOG: $log",
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+          ),
+          const SizedBox(height: 30),
+
+          // 업무 리스트
+          Text(
+            "AVAILABLE TASKS",
+            style: GoogleFonts.oswald(color: Colors.white70, fontSize: 18),
+          ),
+          const SizedBox(height: 10),
+
+          _buildTaskCard(
+            context,
+            title: "주민 공청회 개최",
+            subtitle: "지역 주민들의 불안감을 해소합니다. (3시간 소요)",
+            icon: Icons.groups,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PersuasionScreen(),
+                ),
+              );
+            },
+          ),
+
+          _buildTaskCard(
+            context,
+            title: "안전 보고서 작성",
+            subtitle: "규제 기관에 보고서를 제출합니다. (5시간 소요)",
+            icon: Icons.description,
+            onTap: () {
+              // 즉시 수행 예시
+              context.read<GameManager>().performAction("보고서 작성", 5, () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("보고서 제출 완료! 신뢰도가 상승했습니다.")),
+                );
+              });
+            },
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildNpcCard(
-    BuildContext context,
-    String name,
-    String imgPath,
-    String status,
-    Color statusColor,
-  ) {
+  Widget _buildTaskCard(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return Card(
-      color: const Color(0xFF1E2126),
-      margin: const EdgeInsets.only(bottom: 15),
+      color: const Color(0xFF1E2228),
+      margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Colors.grey[800],
-          child: const Icon(Icons.person, color: Colors.white),
-        ), // 나중에 이미지로 교체
+        leading: Icon(icon, color: Colors.cyanAccent),
         title: Text(
-          name,
+          title,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
-        subtitle: Text(status, style: TextStyle(color: Colors.white54)),
-        trailing: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.cyan.withOpacity(0.2),
-            foregroundColor: Colors.cyanAccent,
-          ),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const PersuasionScreen()),
-            );
-          },
-          child: const Text("면담 요청 (3H)"),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(color: Colors.grey, fontSize: 12),
         ),
+        trailing: const Icon(
+          Icons.arrow_forward_ios,
+          color: Colors.white24,
+          size: 16,
+        ),
+        onTap: onTap,
       ),
     );
   }

@@ -54,7 +54,7 @@ class DashboardScreen extends StatelessWidget {
                             dotData: const FlDotData(show: false),
                             belowBarData: BarAreaData(
                               show: true,
-                              color: Colors.redAccent.withOpacity(0.1),
+                              color: Colors.redAccent.withValues(alpha: .1),
                             ),
                           ),
                         ],
@@ -86,7 +86,7 @@ class DashboardScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 5),
                         Text(
-                          "> ${game.log}",
+                          "> ${game.lastLog}",
                           style: GoogleFonts.firaCode(
                             color: Colors.yellowAccent,
                             fontSize: 11,
@@ -152,7 +152,7 @@ class DashboardScreen extends StatelessWidget {
                     height: 50,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red.withOpacity(0.2),
+                        backgroundColor: Colors.red.withValues(alpha: .2),
                         side: const BorderSide(color: Colors.red, width: 2),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(0),
@@ -211,7 +211,7 @@ class DashboardScreen extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
           color: Colors.black,
-          border: Border.all(color: color.withOpacity(0.5)),
+          border: Border.all(color: color.withValues(alpha: .5)),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

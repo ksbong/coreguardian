@@ -34,7 +34,7 @@ class ReactorVisualizer extends StatelessWidget {
             duration: const Duration(milliseconds: 500),
             height: 200,
             decoration: BoxDecoration(
-              color: coreColor.withOpacity(0.5),
+              color: coreColor.withValues(alpha: .5),
               borderRadius: const BorderRadius.vertical(
                 bottom: Radius.circular(15),
               ),
