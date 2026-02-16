@@ -89,12 +89,12 @@ class _Reactor3DViewState extends State<Reactor3DView> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.9),
+                  color: Colors.black.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.cyanAccent),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.cyanAccent.withOpacity(0.4),
+                      color: Colors.cyanAccent.withValues(alpha: 0.4),
                       blurRadius: 10,
                     ),
                   ],

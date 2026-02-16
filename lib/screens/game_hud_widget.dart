@@ -9,125 +9,168 @@ class GameTopHud extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final game = context.watch<GameManager>();
+    // Consumer2를 사용하여 GameManger와 ReactorProvider 둘 다 구독
+    return Consumer2<GameManager, ReactorProvider>(
+      builder: (context, game, reactor, child) {
+        final state = reactor.state;
 
-    return SafeArea(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // 왼쪽: 날짜/시간
-            _buildInfoChip(
-              Icons.calendar_today,
-              "Day ${game.day}  ${game.timeString}",
-              Colors.white,
+        // 온도에 따른 위험 색상 결정
+        Color tempColor = Colors.cyanAccent;
+        if (state.temperature > 800) tempColor = Colors.orangeAccent;
+        if (state.temperature > 1000) tempColor = Colors.redAccent;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withValues(alpha: .9),
+                Colors.black.withValues(alpha: 0.0),
+              ],
             ),
-
-            // 오른쪽: 설정/일시정지
-            Row(
+          ),
+          child: SafeArea(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildInfoChip(
-                  Icons.attach_money,
-                  "1,250K",
-                  Colors.greenAccent,
-                ), // 예시: 자금
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(
-                    game.isPaused
-                        ? Icons.play_circle_fill
-                        : Icons.pause_circle_filled,
-                    size: 32,
-                    color: Colors.white,
-                  ),
-                  onPressed: () {
-                    game.isPaused ? game.startGame() : game.pauseGame();
-                  },
+                // 1. 좌측: 날짜 및 시간
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "DAY ${game.day}",
+                      style: GoogleFonts.oswald(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.access_time,
+                          color: Colors.white70,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          game.timeString,
+                          style: GoogleFonts.shareTechMono(
+                            color: Colors.white70,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                // 2. 중앙: 시스템 상태 (경고 메시지)
+                _buildSystemStatus(state),
+
+                // 3. 우측: 핵심 물리 수치 (온도, 압력, 출력)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildStatRow(
+                      "TEMP",
+                      "${state.temperature.toStringAsFixed(0)}°C",
+                      tempColor,
+                    ),
+                    const SizedBox(height: 4),
+                    _buildStatRow(
+                      "PRES",
+                      "${state.pressure.toStringAsFixed(2)} MPa",
+                      Colors.white70,
+                    ),
+                    const SizedBox(height: 4),
+                    _buildStatRow(
+                      "PWR",
+                      "${state.electricalOutput.toStringAsFixed(0)} MWe",
+                      Colors.amberAccent,
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildInfoChip(IconData icon, String label, Color color) {
+  // 시스템 상태 텍스트 위젯
+  Widget _buildSystemStatus(ReactorState state) {
+    String status = "NORMAL";
+    Color color = Colors.greenAccent;
+    IconData icon = Icons.check_circle_outline;
+
+    if (state.isMeltdown) {
+      status = "MELTDOWN";
+      color = Colors.red;
+      icon = Icons.warning_amber_rounded;
+    } else if (state.isScrammed) {
+      status = "SCRAMMED";
+      color = Colors.orange;
+      icon = Icons.error_outline;
+    } else if (state.temperature > 1000) {
+      status = "CRITICAL";
+      color = Colors.redAccent;
+      icon = Icons.gpp_bad;
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black54,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white24),
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, color: color, size: 16),
           const SizedBox(width: 8),
           Text(
-            label,
-            style: GoogleFonts.shareTechMono(color: Colors.white, fontSize: 14),
+            status,
+            style: GoogleFonts.oswald(
+              color: color,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
           ),
         ],
       ),
     );
   }
-}
 
-class SideMonitorWidget extends StatelessWidget {
-  const SideMonitorWidget({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final reactor = context.watch<ReactorProvider>().state;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
+  // 우측 수치 표시용 헬퍼
+  Widget _buildStatRow(String label, String value, Color valueColor) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        _buildSideGraph(
-          "Pressure",
-          reactor.pressure / 20.0,
-          Colors.cyan,
-        ), // 20MPa 기준
-        const SizedBox(height: 8),
-        _buildSideGraph(
-          "Core Heat",
-          reactor.temperature / 1500.0,
-          Colors.redAccent,
-        ), // 1500도 기준
-      ],
-    );
-  }
-
-  Widget _buildSideGraph(String label, double percent, Color color) {
-    return Container(
-      width: 120,
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: .6),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(8),
-          bottomLeft: Radius.circular(8),
+        Text(
+          label,
+          style: GoogleFonts.shareTechMono(color: Colors.grey, fontSize: 12),
         ),
-        border: Border(right: BorderSide(color: color, width: 3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white70, fontSize: 10),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 80, // 고정 폭으로 숫자 떨림 방지
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: GoogleFonts.shareTechMono(
+              color: valueColor,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          const SizedBox(height: 4),
-          LinearProgressIndicator(
-            value: percent.clamp(0.0, 1.0),
-            backgroundColor: Colors.white10,
-            color: color,
-            minHeight: 4,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
