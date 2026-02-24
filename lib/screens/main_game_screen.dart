@@ -5,9 +5,55 @@ import '../features/simulation/logic/game_manager.dart';
 import 'reactor_3d_view.dart';
 import 'side_monitor_widget.dart'; // 우측 그래프 모니터
 import 'control_panel_widget.dart'; // 👈 [핵심] 이걸 import 해야 함!
+import 'daily_report_screen.dart';
+import 'waste_minigame_screen.dart';
 
-class MainGameScreen extends StatelessWidget {
-  const MainGameScreen({super.key});
+class MainGameScreen extends StatefulWidget {
+  @override
+  State createState() => _MainGameScreenState();
+}
+
+class _MainGameScreenState extends State<MainGameScreen> {
+  // main_game_screen.dart 내부에 추가할 로직
+  @override
+  void initState() {
+    super.initState();
+
+    // 프레임 렌더링 후 콜백 연결
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final gameManager = context.read<GameManager>();
+
+      // 1. 일과 종료 시 정산 화면 띄우기
+      gameManager.onDayEnded = (stats) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DailyReportScreen(
+              stats: stats,
+              onNextDay: () {
+                Navigator.pop(context); // 정산창 닫기
+                gameManager.startNextDay(); // 다음날 시작 (여기서 다시 타이머 돎)
+              },
+            ),
+          ),
+        );
+      };
+
+      // 2. 미니게임 트리거 시 화면 띄우기
+      gameManager.onMinigameTriggered = () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WasteMinigameScreen(
+              onComplete: () {
+                gameManager.startGame(); // 미니게임 끝나면 메인 게임 시간 재개
+              },
+            ),
+          ),
+        );
+      };
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

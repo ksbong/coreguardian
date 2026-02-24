@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../features/simulation/logic/game_manager.dart';
 import '../features/simulation/logic/daily_stats.dart'; // 위에서 만든 파일 import
 
 class DailyReportScreen extends StatefulWidget {
