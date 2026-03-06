@@ -10,20 +10,16 @@ class Reactor3DView extends StatefulWidget {
   State<Reactor3DView> createState() => _Reactor3DViewState();
 }
 
-class _Reactor3DViewState extends State<Reactor3DView> {
+// 🚀 [NEW] 맥동하는 보호막 애니메이션을 위해 TickerProvider 추가
+class _Reactor3DViewState extends State<Reactor3DView>
+    with SingleTickerProviderStateMixin {
   final Flutter3DController _controller = Flutter3DController();
 
-  // ====================================================
-  // 📐 [카메라 설정] 여기가 핵심!
-  // 모델에 따라 이 숫자들을 조금씩 조절해서 최적의 뷰를 찾으세요.
-  // ====================================================
-  final double _initialRadius = 25.0; // 줌 (거리)
-  final double _initialTheta = 45.0; // 가로 회전 (45도 대각선)
-  final double _initialPhi = 55.0; // 세로 각도 (내려다보기)
-  // ⭐ 모델이 너무 밑에 있으면 이 값을 키우세요 (예: 1.0 -> 2.0)
-  final double _targetY = 2.0; // 카메라 시선 높이 보정
+  final double _initialRadius = 25.0;
+  final double _initialTheta = 45.0;
+  final double _initialPhi = 55.0;
+  final double _targetY = 2.0;
 
-  // 🎯 [히트박스 설정] 중앙 인터랙션 영역 크기
   final double _hitBoxWidth = 400.0;
   final double _hitBoxHeight = 350.0;
 
@@ -31,18 +27,34 @@ class _Reactor3DViewState extends State<Reactor3DView> {
   Offset _mousePos = Offset.zero;
   Offset? _pointerDownPosition;
 
+  // 🚀 [NEW] 보호막 애니메이션 컨트롤러
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
   @override
   void initState() {
     super.initState();
-    // 모델 로딩이 끝나면 설정한 카메라 각도로 즉시 이동
     _controller.onModelLoaded.addListener(() {
       if (_controller.onModelLoaded.value) {
-        // 1. 시선 높이 조절 (모델 끌어올리기)
         _controller.setCameraTarget(0, _targetY, 0);
-        // 2. 얼짱 각도로 세팅
         _controller.setCameraOrbit(_initialTheta, _initialPhi, _initialRadius);
       }
     });
+
+    // 🚀 [NEW] 숨쉬듯 커졌다 작아지는 애니메이션 설정
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 0.9, end: 1.1).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose(); // 🚀 [NEW] 메모리 누수 방지
+    super.dispose();
   }
 
   @override
@@ -50,8 +62,44 @@ class _Reactor3DViewState extends State<Reactor3DView> {
     const String modelPath = 'assets/models/nuclear.glb';
 
     return Stack(
+      alignment: Alignment.center,
       children: [
-        // 1. 제스처 감지기 (Translucent로 통과시킴)
+        // 🚀 [NEW] 맥동하는 에너지 보호막 (3D 모델보다 뒤에 깔림)
+        AnimatedBuilder(
+          animation: _pulseAnimation,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _pulseAnimation.value,
+              child: Container(
+                width: 350, // 보호막 크기 조절
+                height: 350,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.cyanAccent.withOpacity(0.1),
+                      Colors.cyanAccent.withOpacity(0.0),
+                    ],
+                    stops: const [0.5, 1.0],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.cyanAccent.withOpacity(0.3),
+                      blurRadius: 50,
+                      spreadRadius: 20,
+                    ),
+                  ],
+                  border: Border.all(
+                    color: Colors.cyanAccent.withOpacity(0.5),
+                    width: 2,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+
+        // 1. 기존 제스처 감지기 & 3D 뷰어 (수정 없음)
         Listener(
           behavior: HitTestBehavior.translucent,
           onPointerHover: (event) {
@@ -63,21 +111,18 @@ class _Reactor3DViewState extends State<Reactor3DView> {
             if (_pointerDownPosition != null) {
               final distance =
                   (event.localPosition - _pointerDownPosition!).distance;
-              if (distance < 10) {
-                // 드래그가 아닌 클릭일 때만
-                _handleClick();
-              }
+              if (distance < 10) _handleClick();
             }
           },
           child: Flutter3DViewer(
             controller: _controller,
             src: modelPath,
             progressBarColor: Colors.cyanAccent,
-            enableTouch: true, // 회전 허용
+            enableTouch: true,
           ),
         ),
 
-        // 2. 호버링 라벨
+        // 2. 호버링 라벨 (수정 없음)
         if (_isHovering && widget.isInteractive)
           Positioned(
             top: _mousePos.dy - 50,
@@ -151,15 +196,11 @@ class _Reactor3DViewState extends State<Reactor3DView> {
         localPos.dx <= right &&
         localPos.dy >= top &&
         localPos.dy <= bottom);
-
-    if (_isHovering != inside) {
-      setState(() => _isHovering = inside);
-    }
+    if (_isHovering != inside) setState(() => _isHovering = inside);
   }
 
   void _handleClick() {
     if (_isHovering && widget.isInteractive) {
-      // 🚀 탱탱볼 애니메이션 팝업 호출
       _showBouncingPopup(
         context,
         "원자로 통합 제어실",
@@ -168,14 +209,13 @@ class _Reactor3DViewState extends State<Reactor3DView> {
     }
   }
 
-  // 🎉 [NEW] 튕겨 나오는 애니메이션 팝업 함수
   void _showBouncingPopup(BuildContext context, String title, String content) {
     showGeneralDialog(
       context: context,
-      barrierDismissible: true, // 바깥 클릭 시 닫힘
+      barrierDismissible: true,
       barrierLabel: "Close",
-      barrierColor: Colors.black54, // 배경 어둡게
-      transitionDuration: const Duration(milliseconds: 400), // 애니메이션 속도 (0.4초)
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 400),
       pageBuilder: (ctx, anim1, anim2) {
         return AlertDialog(
           backgroundColor: const Color(0xFF1E2228),
@@ -212,12 +252,8 @@ class _Reactor3DViewState extends State<Reactor3DView> {
         );
       },
       transitionBuilder: (ctx, anim1, anim2, child) {
-        // 📈 elasticOut 곡선을 사용해서 띠용~ 하는 효과 주기
         final curvedValue = Curves.elasticOut.transform(anim1.value);
-        return Transform.scale(
-          scale: curvedValue, // 0배에서 1배로 커지면서 튕김
-          child: child,
-        );
+        return Transform.scale(scale: curvedValue, child: child);
       },
     );
   }

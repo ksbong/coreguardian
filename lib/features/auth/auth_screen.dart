@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../simulation/logic/game_manager.dart';
+import '../../screens/main_game_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -24,6 +27,8 @@ class _AuthScreenState extends State<AuthScreen> {
           email: _emailController.text,
           password: _passwordController.text,
         );
+        // 🚀 [NEW] 로그인 성공 시 로비(월드 선택) 다이얼로그 호출
+        if (mounted) _showLobbyDialog();
       } else {
         await Supabase.instance.client.auth.signUp(
           email: _emailController.text,
@@ -50,8 +55,84 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  // 🚀 [NEW] 로비 다이얼로그 (이어하기 / 새 게임)
+  void _showLobbyDialog() async {
+    final manager = Provider.of<GameManager>(context, listen: false);
+    bool hasSave = await manager.loadGameLocal();
+    final _worldNameCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: Text(
+            "시스템 접속 완료",
+            style: GoogleFonts.orbitron(color: Colors.cyanAccent),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (hasSave) ...[
+                Text(
+                  "발견된 세이브: ${manager.worldName} (Day ${manager.day})",
+                  style: TextStyle(color: Colors.white),
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
+                  onPressed: () {
+                    manager.startGame();
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => MainGameScreen()),
+                    );
+                  },
+                  child: const Text("이어하기 (Load Game)"),
+                ),
+                const Divider(color: Colors.grey, height: 30),
+              ],
+              TextField(
+                controller: _worldNameCtrl,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: "새 프로젝트 이름",
+                  labelStyle: TextStyle(color: Colors.grey),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.cyan),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.cyanAccent,
+                  foregroundColor: Colors.black,
+                ),
+                onPressed: () {
+                  if (_worldNameCtrl.text.isNotEmpty) {
+                    manager.createNewWorld(_worldNameCtrl.text);
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => MainGameScreen()),
+                    );
+                  }
+                },
+                child: const Text("새 월드 생성 (New Game)"),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // UI 코드는 기존 코드와 100% 동일하게 유지 (생략 없이 원본 그대로)
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
       body: Center(
