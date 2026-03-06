@@ -9,6 +9,8 @@ import 'daily_report_screen.dart';
 import 'waste_minigame_screen.dart';
 
 class MainGameScreen extends StatefulWidget {
+  const MainGameScreen({super.key});
+
   @override
   State createState() => _MainGameScreenState();
 }

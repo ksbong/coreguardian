@@ -35,8 +35,7 @@
 | **Framework** | ![Flutter](https://img.shields.io/badge/Flutter-02569B?style=flat&logo=flutter&logoColor=white) | Cross-platform App Development |
 | **Language** | ![Dart](https://img.shields.io/badge/Dart-0175C2?style=flat&logo=dart&logoColor=white) | UI & Game Logic |
 | **3D Engine** | **Flutter 3D Controller** | Interactive Reactor Visualization |
-| **Backend** | ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white) | Leaderboard & User Data (Planned) |
-| **Simulation** | ![Rust](https://img.shields.io/badge/Rust-000000?style=flat&logo=rust&logoColor=white) | Complex Physics Calculation (Optional) |
+| **Backend** | ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white) | Leaderboard & User Data 
 
 <br>
 

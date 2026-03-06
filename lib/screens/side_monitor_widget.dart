@@ -16,6 +16,7 @@ class _SideMonitorWidgetState extends State<SideMonitorWidget> {
   final List<double> _tempHistory = List.filled(50, 0.0, growable: true);
 
   // 갱신 주기를 조절하기 위한 변수 (매 프레임마다 리스트가 너무 빨리 차는 것 방지)
+  // ignore: unused_field
   final int _tickCounter = 0;
 
   @override
